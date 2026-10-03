@@ -1,0 +1,47 @@
+#include <stdio.h>
+int main(void)
+{
+	int y=0,m=0,d=0,ds=0,i=1;
+	scanf("%d/%d/%d",&y,&m,&d);
+	if((y%4==0&&y%100!=0)||y%400==0)
+	{
+		while(m>i)
+		{
+			if(i==1||i==3||i==5||i==7||i==8||i==10||i==12)
+			{
+				ds=ds+31;
+			}
+			if(i==4||i==6||i==9||i==11)
+			{
+				ds=ds+30;
+			}
+			if(i==2)
+			{
+				ds=ds+29;
+			}
+			i++;
+		}
+	}
+	else
+	{
+		while(m>i)
+		{
+			if(i==1||i==3||i==5||i==7||i==8||i==10||i==12)
+			{
+				ds=ds+31;
+			}
+			if(i==4||i==6||i==9||i==11)
+			{
+				ds=ds+30;
+			}
+			if(i==2)
+			{
+				ds=ds+28;
+			}
+			i++;
+		}
+	}
+	ds=ds+d;
+	printf("%d",ds);
+	return(0);
+}
