@@ -129,10 +129,9 @@ main()
 
 ## 七、已知问题     含AIGC内容，请谨慎辨别！
 
-1. GCC 加 `-Wall -Wextra` 会有两处 `statement with no effect` 告警（功能 7、9 的 `for (num_location; ...)`），不影响运行。
-2. 功能 9 删空数组后跳转到功能 2 时，会先打印「你选择了功能 9」，提示语不够精确。
-3. `system("cls")` / `system("pause")` 是 Windows 命令，在 Linux / macOS 下会有报错提示，但程序仍可继续使用。
-4. 数组容量固定为 `MAX_LENGTH`（5），没有做动态分配。
+1. GCC 加 `-Wall -Wextra` 会有两处 `statement with no effect` 警告（功能 7、9 的 `for (num_location; ...)`），不影响运行。
+2. function_start在case9 goto case2 时，会打印错误的功能选择提示。
+3. case9 存在可能使数组处理长度小于MIN_LENGTH。
 
 ---
 
@@ -157,6 +156,7 @@ main()
 ## 十、更新记录
 
 - 20261002 程序完工，等待后续重构优化···
+- 20261003 修复了文档中的一些错误
 
 
 
