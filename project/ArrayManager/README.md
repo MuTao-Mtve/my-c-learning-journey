@@ -1,23 +1,31 @@
-# ArrayMannger · 一维数组综合管理器  
+# ArrayManager · 一维数组综合管理器 · V0.03
+
 # 包含AIGC内容，请谨慎辨别！
 
 > 个人 C 语言学习项目：一个一维数组管理器。
-
+> 版本定位：**状态管理重构版**——把上一版残留的全局变量收进 `main()`，改用指针在函数间传递。
 
 ---
 
 ## 一、目录结构
 
 ```
-ArrayMannger/
-├── README.md                  本文件：重构版说明
-├── ArrayMananger-GBK.c        GBK编码源代码
-├── ArrayMananger-UTF8.c       UTF-8编码源代码
-└── ArrayManager.old           历史版本
+project/ArrayManager/
+├── ArrayManager-GBK.c          GBK 编码源代码（当前版本）
+├── ArrayManager-UTF8.c         UTF-8 编码源代码（当前版本）
+└── ArrayManager.old/           历史版本
+    ├── V0.01/                  初版：单文件、main 里堆满算法
+    ├── V0.02/                  第一次重构：功能函数化、消除 goto
+    └── V0.03/                  本版本快照（源码 + 本文件）
 ```
 
+`V0.03/` 内是当前源码的存档副本，与本目录下的两份 `.c` 完全一致（已用哈希核对）。
+
+---
 
 ## 二、功能一览
+
+功能与 V0.02 相同，未增删。
 
 | 序号 | 功能 | 说明 |
 | :--: | --- | --- |
@@ -33,7 +41,7 @@ ArrayMannger/
 | 10 | 数组去重 | 重复元素只保留第一次出现的位置 |
 | 0 | 退出程序 | 结束运行 |
 
-> 菜单里功能 4/5 的文案写的是「排序原数组并输出新数组」，但实现仍是**就地排序**，并没有生成新数组，属于文案瑕疵（见第八节）。
+> 菜单里功能 4/5 写的是「排序原数组并输出新数组」，但实现仍是**就地排序**，没有生成新数组，属于文案瑕疵（见第八节）。
 
 ---
 
@@ -46,10 +54,13 @@ ArrayMannger/
 > - 系统：Win10 / Win11（更旧的 Windows 版本应该也能跑）。
 > - 程序启动后**先完成初始化**（输入数组长度 → 依次输入各元素），之后才进入功能菜单。
 > - `system("cls")` / `system("pause")` 是 Windows 命令，在 Linux / macOS 下会有报错提示，但程序仍可继续使用。
+> - 用 GCC 编译 GBK 版需加参数：`-finput-charset=GBK -fexec-charset=UTF-8`。
 
 ---
 
 ## 四、输入约束
+
+与 V0.02 相同。
 
 | 项目 | 约束 |
 | --- | --- |
@@ -58,7 +69,7 @@ ArrayMannger/
 | 菜单选项 | 整数，0 ~ 10 |
 | 位置索引 | 对用户从 1 开始计数 |
 
-重构后所有输入统一走同一个校验函数，以下情况都会提示并要求重新输入，不会崩溃也不会污染缓冲区：
+所有输入统一走 `get_user_input()`，以下情况都会提示并要求重新输入，不会崩溃也不会污染缓冲区：
 
 - 非数字内容（`abc`、空输入等）；
 - 数字后跟随多余字符（`3.5abc`、`5 5`）；
@@ -68,7 +79,7 @@ ArrayMannger/
 
 ---
 
-## 五、源码结构（重构版）      AIGC内容，请谨慎辨别！
+## 五、源码结构（V0.03）
 
 ### 1. 宏定义（文件顶部）
 
@@ -86,165 +97,160 @@ ArrayMannger/
 | `NORMAL_ORDER` | 1 | 排序方向：升序 |
 | `REVERSE_ORDER` | 2 | 排序方向：降序 |
 
-全局变量：`array_length`（当前长度）、`user_function_choice`（当前选择）、`array[]`（数组本体）。
+**与 V0.02 的差别**：文件顶部不再有全局变量。
+
+| 版本 | 文件顶部的状态变量 |
+| --- | --- |
+| V0.02 | `int array_length`、`int user_function_choice`、`double array[MAX_LENGTH]`（均为全局） |
+| V0.03 | **无**——三者全部移入 `main()` 成为局部变量 |
 
 ### 2. 函数框架
+
+带 `*p` 的参数表示「通过指针读写的长度变量」。
 
 | 函数 | 作用 |
 | --- | --- |
 | `clear_buffer()` | 清空键盘缓冲区，丢弃当前行剩余字符 |
-| `get_user_input(max, min, function_selection)` | 统一的输入读取与校验，是本版输入健壮性的核心 |
-| `get_user_int_input(max, min)` | 在 `get_user_input` 基础上要求整数，并转为 `int` |
-| `print_menu()` | 只负责打印主菜单（不再兼顾读输入） |
-| `get_user_choice()` | 读取用户选择并写入全局变量 |
-| `function_start()` | 打印「你选择了功能 N」的提示 |
+| `get_user_input(max, min, function_selection)` | 统一的输入读取与校验 |
+| `get_user_int_input(max, min)` | 在 `get_user_input` 基础上要求整数 |
+| `print_menu()` | 只负责打印主菜单 |
+| `get_user_choice(int *p)` | 读取用户选择，**写入指针所指变量** |
+| `function_start(int *p)` | 打印「你选择了功能 N」，值由指针读入 |
 | `function_over()` | 分支统一收尾：暂停 + 清屏，返回主菜单 |
 | `bubble_sort(arr, n, require_order)` | 冒泡排序，按 `NORMAL_ORDER` / `REVERSE_ORDER` 决定方向 |
-| `array_print()` | 按位置输出当前数组 |
-| `pre_initialize()` | 输入数组长度与各元素 |
-| `initialize()` | 欢迎信息 + `pre_initialize()` + 清屏 |
+| `array_print(double arr[], int *p)` | 按位置输出数组，长度由指针读入 |
+| `pre_initialize(int *p_length, double arr[])` | 输入数组长度与各元素 |
+| `initialize(int *p_length, double arr[])` | 欢迎信息 + `pre_initialize()` + 清屏 |
 | `program_exit()` | 打印告别语并 `exit(0)` |
-| `statistics()` | 功能 3：总和、平均值、最大值、最小值 |
-| `search_num()` | 功能 6：查找指定值并输出次数与位置 |
-| `delete_element_by_location()` | 功能 7：按位置删除 |
-| `insert_element()` | 功能 8：按位置插入 |
-| `delete_elements_by_value()` | 功能 9：按值删除全部匹配项 |
-| `array_unique()` | 功能 10：去重 |
-| `main()` | `initialize()` + `while(1)` 主循环 + `switch` 派发 |
+| `statistics(double array[], int *p_length)` | 功能 3：总和、平均值、最大值、最小值 |
+| `search_num(int *p_length, double array[])` | 功能 6：查找指定值并输出次数与位置 |
+| `delete_element_by_location(int *p_length, double array[])` | 功能 7：按位置删除 |
+| `insert_element(int *p_length, double array[])` | 功能 8：按位置插入 |
+| `delete_elements_by_value(int *p_length, double array[])` | 功能 9：按值删除全部匹配项 |
+| `array_unique(int *p_length, double array[])` | 功能 10：去重 |
+| `main()` | 声明局部数组与长度，取指针后调 `initialize()`，再进主循环 |
 
 ### 3. 主流程
 
 ```
 main()
- ├── initialize()
- │    ├── 打印欢迎信息与各项约束
- │    ├── 输入数组长度（get_user_int_input）
- │    └── 循环输入每个元素（get_user_input）
- └── while(1)
-      ├── print_menu() + get_user_choice()
-      ├── switch(选择)
-      │    ├── case 0  → function_start() + program_exit()
-      │    ├── case 1  → 显示数组
-      │    ├── case 2  → pre_initialize() + 回显 + 收尾
-      │    ├── case 3  → statistics()        （长度不足时提示后返回菜单）
-      │    ├── case 4  → bubble_sort(NORMAL_ORDER)  + 输出
-      │    ├── case 5  → bubble_sort(REVERSE_ORDER) + 输出
-      │    ├── case 6  → search_num()
-      │    ├── case 7  → delete_element_by_location() + 输出
-      │    ├── case 8  → insert_element() + 输出
-      │    ├── case 9  → delete_elements_by_value()（成功时函数内自行输出）
-      │    ├── case 10 → array_unique() + 输出
-      │    └── default  → 提示重新选择
-      └── 各分支结束后 function_over() 返回菜单
+ ├── int array_length = 0;
+ ├── int user_function_choice = 0;
+ ├── double array[MAX_LENGTH] = {0};
+ ├── int *p_length = &array_length;                      ← 取地址
+ ├── int *p_user_function_choice = &user_function_choice;
+ ├── initialize(p_length, array)
+ └── while(1)                                             ← 外层：管菜单
+      ├── print_menu()
+      ├── get_user_choice(p_user_function_choice)
+      └── while(1)                                        ← 内层：管一次功能执行
+           ├── function_start(p_user_function_choice)
+           ├── switch (user_function_choice)
+           │    ├── case 0  → program_exit()
+           │    ├── case 1  → array_print(array, p_length)
+           │    ├── case 2  → pre_initialize() + array_print()
+           │    ├── case 3  → statistics(array, p_length)
+           │    ├── case 4  → bubble_sort(NORMAL_ORDER)  + array_print()
+           │    ├── case 5  → bubble_sort(REVERSE_ORDER) + array_print()
+           │    ├── case 6  → search_num(p_length, array)
+           │    ├── case 7  → delete_element_by_location() + array_print()
+           │    ├── case 8  → insert_element() + array_print()
+           │    ├── case 9  → delete_elements_by_value()
+           │    ├── case 10 → array_unique() + array_print()
+           │    └── default  → 提示重新选择
+           ├── function_over()
+           └── break                                        ← 内层只跑一轮
 ```
 
-`main` 中已不存在任何算法实现、没有 `goto`，也没有跨 `case` 的标号。
+各 `case` 内不再出现 `function_start()` 和 `function_over()`，二者被提到 `switch` 前后各执行一次。
 
 ---
 
-## 六、更新内容
+## 六、本版更新内容
 
-1. **功能函数化**：case 3 / 6 / 7 / 8 / 9 / 10 的算法全部抽成独立函数，`main` 只保留派发。
-2. **初始化与退出拆分**：初始化拆成 `initialize()` + `pre_initialize()`，退出拆成 `program_exit()`。
-3. **菜单职责拆分**：`print_menu()` 只打印，`get_user_choice()` 负责读选择并写全局变量。
-4. **输入模块统一**：两份近似重复的输入函数合并为一个带模式参数的 `get_user_input()`，并配套 `get_user_int_input()`。
-5. **排序函数合并**：`bubble_sort` / `reverse_bubble_sort` 合并为一个带方向参数的函数，用宏替代魔法值。
-6. **消除控制流坏味道**：删除 `restart:` 标号与两处 `goto`；`break` 的出分支语义改为函数内 `return`。
-7. **容量放宽**：`MAX_LENGTH` 由 5 提升到 100，使功能 7/8/9/10 有实际演示空间（原值下插入一个元素就会触顶）。
+1. **状态去全局化（核心改动）**：`array_length` 与 `user_function_choice` 由全局变量改为 `main()` 的局部变量，`array[]` 成为 `main()` 的局部数组。全局只剩宏定义，没有任何可变全局状态。
+2. **指针传递长度**：所有会改变长度的函数（`pre_initialize`、`delete_element_by_location`、`insert_element`、`delete_elements_by_value`、`array_unique`）都改为接收 `int *p_length`，用 `(*p_length)--` / `(*p_length)++` 直接回写调用方的变量。
+3. **只读函数按值/按指针读长度**：`array_print`、`function_start`、`get_user_choice` 接收指针只读；`bubble_sort` 仍按值接收 `int n`，因为排序不改变长度。
+4. **主循环整理**：新增内层 `while(1)` 包住 `switch`，把 `function_start()` 与 `function_over()` 从每个 `case` 里提出来统一调用，`case` 内代码明显变短。
 
----
+   ```c
+   // V0.02：每个 case 都重复这两句
+   case 1: { function_start(); array_print(); function_over(); break; }
 
-## 七、缺陷修复清单      AIGC内容，请谨慎辨别！
+   // V0.03：提到 switch 外
+   while(1) {
+       function_start(p_user_function_choice);
+       switch (...) { case 1: { array_print(array, p_length); break; } ... }
+       function_over();
+       break;      // ← 内层只执行一轮
+   }
+   ```
 
-以下每条均为「重构前 → 重构后」的实际差异，并给出了验证方式。
-
-### 7.1 输入校验（真实缺陷）
-
-**① 行尾多余字符被静默丢弃**
-- 缺陷：重构前输入函数在 `scanf` 成功后直接 `clear_buffer()`，把同一行剩余字符全部吃掉，于是 `3.5abc`、`5 5`、`12xxx` 会被「悄悄接受」，用户看不到任何提示。
-- 修复：重构版在 `scanf` 之后立即 `input_check = getchar();`，若该字符不是 `'\n'` 也不是 EOF，就报「数组后跟随有多余输入」并要求重新输入。
-
-| 输入 `3.5abc`（允许范围 1~5） | 结果 |
-| --- | --- |
-| 重构前 | 无任何提示，按 `3.5` **静默接受** |
-| 重构版 | 报「数组后跟随有多余输入」，重新输入后取新值 |
-
-**② 类型错误被误报成范围错误**
-- 缺陷：重构前把 `ret != 1 || 超上限 || 超下限` 放在同一个 `else if` 里，而「是否为整数」的判断排在最后。于是在整数功能里输入 `5.5`（该次范围 1~5）时，会先因超范围命中，报出「输入内容不合法」，让用户误以为是数值越界。
-- 修复：重构版先判类型再判范围，两者拆分，提示分别为「输入类型非法！请输入合法整数！」与「输入非法！请检查输入范围！」。
-
-**③ 两个输入函数的上下界参数顺序相反**
-- 缺陷：`int_get_input(value_min, value_max)` 与 `double_get_input(value_max, value_min)` 顺序互反。当前所有调用点恰好都写对了，但这是埋雷——任何一处写反都会造成 min/max 互换，轻则每次输入都被判非法而陷入死循环，重则范围校验完全失效。
-- 修复：统一为 `get_user_input(max_value, min_value, function_selection)` 与 `get_user_int_input(max, min)`，并用 `INT_CHOICE` / `FLOAT_CHOICE` 区分是否要求整数。
-
-**④ 附带修正**：EOF 提示补上换行（原来会与随后的 `pause` 提示挤在同一行）；「删除成功！」补换行；取消成功后无意义的清缓冲调用。
-
-### 7.2 控制流结构（隐藏缺陷）
-
-**⑤ 跨分支 `goto` 被删除**
-- 缺陷：重构前 `restart:` 标号埋在 case 2 内部，case 3（数组长度小于最小值）与 case 9（数组被删空）用 `goto restart` **跳进 case 2 的语句块**。这能编译能跑，但 case 2 块内任何结构调整都会静默改变这两个功能的行为；而且跳过去后 `function_start()` 打印的是「你选择了功能 9」，紧接着却要求「请输入新的数组长度」，提示与实际行为矛盾。
-- 修复：`statistics()` 与 `delete_elements_by_value()` 改为打印提示后正常返回菜单，由用户自行选择功能 2。
-
-**⑥ `goto` 绕过了数组清零**
-- 缺陷：重构前 case 9 删空数组时 `goto` 会跳过 `array[array_length] = 0.0;`，旧数据残留在全局数组里。
-- 修复：重构版该清零无条件执行，不再存在被控制流绕过的路径。
-
-**⑦ 局部变量遮蔽全局变量**
-- 缺陷：重构前 `print_menu()` 内的 `int user_function_choice = 0;` 遮蔽了同名全局变量，`gcc -Wshadow` 会告警；一旦有人改成「忘了赋值」或「不再 return」，全局选择值就会长期保持旧值，菜单逻辑错乱。
-- 修复：拆为 `print_menu()` + `get_user_choice()`，直接写全局变量，遮蔽消失。
-
-**⑧ 空表达式语句**
-- 缺陷：重构前两处 `for (num_location; ...)` 触发 `-Wunused-value` 告警。
-- 修复：写成 `for (; ...)`，语义相同、告警消失。
-
-### 7.3 功能分支的行为修复
-
-| 项 | 重构前 | 重构版 |
-| --- | --- | --- |
-| 功能 2 重新输入数组 | 只收尾，**不回显**新数组，用户无法确认输入 | 输入结束后立即回显数组 |
-| 功能 3 长度不足 | `goto` 劫持操作流，强制跳去重新输入数组 | 只提示并建议选功能 2，把选择权还给用户 |
-| 功能 9 删空数组 | 强制跳转重输，且提示「你选择了功能 9」 | 提示后回到菜单，可自行选功能 2，也可用功能 8 往空数组插值 |
-| 空数组下的其它功能 | 靠「强制重输」回避越界 | 各函数自带长度守卫：统计检查长度、排序 `n=0` 不进循环、查找循环不进入、去重条件直接不成立 |
-
-### 7.4 验证方式
-
-- 编译告警对比：`gcc -std=c11 -Wall -Wextra -Wshadow`，重构前 3 条告警（1 处变量遮蔽 + 2 处无效果语句），重构版 0 条。
-- 输入行为对比：把两版的输入函数各自原样摘出到独立测试程序，用同一组畸形输入（`3.5abc`、`5.5` 等）对比提示与返回值，结果与 7.1 表格一致。
+5. **编译告警保持为 0**：`gcc -std=c11 -Wall -Wextra -Wshadow` 下无告警（V0.01 为 3 条）。
 
 ---
 
-## 八、已知问题与待改进      AIGC内容，请谨慎辨别！
+## 七、验证记录
 
-1. **去重仍用数据值当删除标记**：`array_unique()` 把 `NUM_TAG`(100000) 写回全局数组作为「已删除」标记，只是因为 100000 恰好落在允许范围 -10000~10000 之外才安全。若将来放宽元素上限到 ≥100000，去重会静默出错；那句 `while (num_NUM_TAG != array_length)` 依赖计数精确相等，逻辑也偏晦涩。
-2. **查找函数的标记数组冗余**：`search_num()` 里的 `int array_location[MAX_LENGTH]` 只为记录命中位置，实际一次循环即可直接输出；扩容到 100 后白占 400 字节。
-3. **菜单文案与实现不符**：功能 4/5 写「排序原数组并输出新数组」，但代码是就地排序，没有生成新数组。
-4. **失败路径多打印一次数组**：功能 7（长度为 1）与功能 8（数组已满）的失败分支返回后，`main` 仍会回显一次数组，属于输出冗余，无功能影响。
-5. **`default` 分支不可达**：选择范围已被限制在 0~10，该分支实际不会执行，且不再调用 `function_over()`；若将来放宽选择范围，会不清屏直接重印菜单。
-6. **重新输入更短的数组时旧元素残留**：超出新长度以外的旧元素仍留在数组里，只是打印受 `array_length` 约束看不见。
-7. **容量仍为固定数组**：没有动态分配，`MAX_LENGTH` 是编译期常量。
-8. **平台相关调用**：`system("cls")` / `system("pause")` 仅适用于 Windows。
+- **编译**：UTF-8 / GBK 两份源码分别用 GCC 编译，均通过，退出码 0；`-Wall -Wextra -Wshadow` 下告警 0 条。
+- **功能回归**：以 `5` 个元素 `3 1 2 2 5` 完成初始化后，依次执行功能 1/3/4/5/6/7/8/10/9 再退出，结果与预期一致：
+
+  | 操作 | 结果 |
+  | --- | --- |
+  | 功能 3 统计 | 总和 13、平均 2.6、最大 5、最小 1 |
+  | 功能 4 升序 | `1 2 2 3 5` |
+  | 功能 5 降序 | `5 3 2 2 1` |
+  | 功能 6 查找 2 | 出现 2 次，位于第 3、4 位 |
+  | 功能 7 删除第 2 位 | `5 2 2 1` |
+  | 功能 8 第 3 位插入 9.5 | `5 2 9.5 2 1` |
+  | 功能 10 去重 | `5 2 9.5 1` |
+  | 功能 9 删除 3（此时已不存在） | 提示未找到 |
+
+- **边界回归**：初始化为 `7 7` 后用功能 9 删空数组，再依次执行功能 3/4/10/1，程序均正常返回菜单，无崩溃、无越界输出——功能 3 提示「数组长度小于最小值」，功能 4 与 1 静默返回，功能 10 提示去重成功。
+
+---
+
+## 八、已知问题与待改进
+
+1. **内层 `while(1)` 实际只跑一轮**：`switch` 后的 `break` 使这个循环恒定执行一次，等价于普通语句块。功能正确，但多一层循环 + 一个 `break`，读者容易误以为内层会重复执行。可改为直接写语句块或用 `do { } while(0)`。
+2. **`main` 中两种取值方式并存**：`switch (user_function_choice)` 直接读局部变量，而 `function_start(p_user_function_choice)` 通过指针读同一变量；`case 4/5` 的 `bubble_sort(array, array_length, ...)` 同样直接读局部变量。当前二者永远相等，但风格不统一，且若将来把变量搬到别处，这些直接引用会静默失效。
+3. **局部变量与指针同名易混**：`main` 里 `array_length` 与 `p_length` 同时存在，函数参数里 `array_length`（V0.02 的写法）已全部改为 `*p_length`，新手阅读时需要在脑中来回换算。
+4. **去重仍用数据值当删除标记**：`array_unique()` 把 `NUM_TAG`(100000) 写回数组作「已处理」标记，仅因 100000 落在允许范围 -10000~10000 之外才安全；若放宽元素上限到 ≥100000，去重会静默出错。
+5. **查找函数的标记数组冗余**：`search_num()` 里的 `int array_location[MAX_LENGTH]` 只为记录命中位置，一次循环即可直接输出；`MAX_LENGTH` 为 100 时白占 400 字节。
+6. **菜单文案与实现不符**：功能 4/5 写「排序原数组并输出新数组」，实际是就地排序。
+7. **空数组时功能 10 仍报成功**：数组长度为 0 时执行去重，会打印「操作成功！数组已成功去重！」并回显空数组，而实际没有任何元素被处理。
+8. **`default` 分支不可达**：选择范围已被限制在 0~10，该分支实际不会执行。
+9. **重新输入更短的数组时旧元素残留**：超出新长度以外的旧元素仍留在数组里，只是打印受长度约束看不见。
+10. **容量仍为固定数组**：没有动态分配，`MAX_LENGTH` 是编译期常量。
+11. **平台相关调用**：`system("cls")` / `system("pause")` 仅适用于 Windows。
 
 ---
 
 ## 九、学习记录
 
-- 20261002 程序完工：程序写于学习一维数组阶段（课本：《C语言程序设计基础》清华大学出版社），涉及数组越界、冒泡排序。
-- 20261005 完成模块化重构与缺陷修复：消除 `goto` 与跨分支标号、统一输入校验、功能函数化，并重写本说明文档（旧版说明保留为 `README.legacy.md`）。
+- **20261002** 程序完工（V0.01）：写于学习一维数组阶段（课本：《C语言程序设计基础》清华大学出版社），涉及数组越界、冒泡排序。
+- **20261005** 第一次重构（V0.02）：功能函数化、消除 `goto`、统一输入校验。
+- **20261023** 第二次重构（V0.03）：把全局状态收进 `main()`，改用指针在函数间传递长度；`main` 中的 `function_start()` / `function_over()` 去重。
 
 ### 后续更新计划
 
-- 优化去重算法；
-- 消除去重算法中的哨兵值依赖，改用更直观的双循环或标记数组；
-- 学习结构体后重构输入与数组的数据组织方式；
-
+- 优化去重算法，消除对哨兵值 `NUM_TAG` 的依赖，改用双循环或标记数组；
+- 让 `search_num()` 去掉多余的 `array_location` 数组，边扫边输出；
+- 统一 `main` 中长度的取值方式，全部走指针，消除直接引用；
+- 去掉内层多余循环；
+- 学习结构体后，把「数组 + 长度」打包成一个整体，彻底不需要到处传两个参数。
 
 ---
 
 ## 十、更新记录
 
 - 20261002 程序完工，等待后续重构优化。
-- 20261002 源码拆分 GBK / UTF-8 两个编码版本，补充本说明文档。
-- 20261005 第一次重构完成。
+- 20261002 源码拆分 GBK / UTF-8 两个编码版本，补充说明文档。
+- 20261005 V0.02：第一次重构完成。
+- V0.03：状态去全局化 + 指针传递长度（本版本）。
+
+> 注：`ArrayManager.old/V0.03/` 为本版本源码与说明的存档快照。
+
 ---
 
 ## 声明
