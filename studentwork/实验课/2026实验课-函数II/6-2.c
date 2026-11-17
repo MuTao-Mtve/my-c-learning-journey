@@ -32,11 +32,7 @@ int fib( int n )
 int fib(int n)
 {
     if(n<=2) return 1;
-    int temp1,temp2;
-    temp1=fib(n-1);
-    temp2=fib(n-2);
-    return (temp1+temp2);
-
+    return (fib(n-1)+fib(n-2));
 }
 */
 void PrintFN( int m, int n )
